@@ -22,6 +22,10 @@ from .canvas_button import CanvasButton
 from .canvas_path import CanvasPath
 from .canvas_polygon import CanvasPolygon
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 class TkinterMapView(tkinter.Frame):
     def __init__(self, *args,
@@ -39,6 +43,10 @@ class TkinterMapView(tkinter.Frame):
         self.height = height
         self.corner_radius = corner_radius if corner_radius <= 30 else 30  # corner_radius can't be greater than 30
         self.configure(width=self.width, height=self.height)
+
+        self.select_mark = None
+        self.selectbox = None
+        self.selectlist = []
 
         # detect color of master widget for rounded corners
         if bg_color is None:
@@ -80,17 +88,23 @@ class TkinterMapView(tkinter.Frame):
         self.button_zoom_out = CanvasButton(self, (20, 60), text="-", command=self.button_zoom_out)
 
         # bind events for mouse button pressed, mouse movement, and scrolling
-        self.canvas.bind("<B1-Motion>", self.mouse_move)
-        self.canvas.bind("<Button-1>", self.mouse_click)
-        self.canvas.bind("<ButtonRelease-1>", self.mouse_release)
-        self.canvas.bind("<MouseWheel>", self.mouse_zoom)
-        self.canvas.bind("<Button-4>", self.mouse_zoom)
-        self.canvas.bind("<Button-5>", self.mouse_zoom)
+        self.canvas.bind("<Control-B1-Motion>", self.mouse_move)
+        self.canvas.bind("<Control-ButtonPress-1>", self.mouse_click)
+        self.canvas.bind("<Control-ButtonRelease-1>>", self.mouse_release)
+        self.canvas.bind("<Control-MouseWheel>", self.mouse_zoom)
+        self.canvas.bind("<Control-Button-4>", self.mouse_zoom)
+        self.canvas.bind("<Control-Button-5>", self.mouse_zoom)
         self.bind('<Configure>', self.update_dimensions)
         self.last_mouse_down_position: Union[tuple, None] = None
         self.last_mouse_down_time: Union[float, None] = None
         self.mouse_click_position: Union[tuple, None] = None
         self.map_click_callback: Union[Callable, None] = None  # callback function for left click on map
+
+        # bind events for selection
+        self.canvas.bind("<ButtonPress-1>", self.select_start)
+        self.canvas.bind("<Shift-ButtonPress-1>", self.shift_select_start)
+        self.canvas.bind("<B1-Motion>", self.select_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.select_stop)
 
         # movement fading
         self.fading_possible: bool = True
@@ -183,6 +197,43 @@ class TkinterMapView(tkinter.Frame):
             self.draw_move()  # call move to draw new tiles or delete tiles
             self.draw_rounded_corners()
 
+    # ============ Selection =========
+
+    def shift_select_start(self, event):
+        log.debug("Starting Selection")
+        self.selectlist.extend(self.canvas.find_withtag(tkinter.CURRENT))
+        log.debug(self.selectlist)
+        self.select_mark = (self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+        (x2, y2) = self.select_mark
+        self.selectbox = self.canvas.create_rectangle(x2, y2, self.canvas.canvasx(event.x),
+                                                      self.canvas.canvasy(event.y))
+
+    def select_start(self, event):
+        self.selectlist = []
+        log.debug("Starting Selection")
+        self.selectlist.extend(self.canvas.find_withtag(tkinter.CURRENT))
+        log.debug(self.selectlist)
+        self.select_mark = (self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+        (x2, y2) = self.select_mark
+        self.selectbox = self.canvas.create_rectangle(x2, y2, self.canvas.canvasx(event.x),
+                                                      self.canvas.canvasy(event.y), outline= "white")
+
+    def select_drag(self, event):
+        (x2, y2) = self.select_mark
+        self.canvas.coords(self.selectbox, x2, y2, self.canvas.canvasx(event.x), self.canvas.canvasy(event.y))
+
+    def select_stop(self, _):
+        log.debug("Finished Selection")
+        a = self.canvas.coords(self.selectbox)
+        if not a == []:
+            (x2, y2, x3, y3) = self.canvas.coords(self.selectbox)
+            self.selectlist.extend(self.canvas.find_enclosed(x2, y2, x3, y3))
+            self.canvas.delete(self.selectbox)
+
+        self.event_generate("<<Selection_Change>>")
+
+    # ================================
+
     def add_right_click_menu_command(self, label: str, command: Callable, pass_coords: bool = False) -> None:
         self.right_click_menu_commands.append({"label": label, "command": command, "pass_coords": pass_coords})
 
@@ -261,7 +312,7 @@ class TkinterMapView(tkinter.Frame):
         else:
             marker_object = None
 
-        self.check_map_border_crossing()
+        # self.check_map_border_crossing()
         self.draw_initial_array()
 
         return marker_object
@@ -719,7 +770,7 @@ class TkinterMapView(tkinter.Frame):
         self.lower_right_tile_pos = (self.lower_right_tile_pos[0] + tile_move_x, self.lower_right_tile_pos[1] + tile_move_y)
         self.upper_left_tile_pos = (self.upper_left_tile_pos[0] + tile_move_x, self.upper_left_tile_pos[1] + tile_move_y)
 
-        self.check_map_border_crossing()
+        # self.check_map_border_crossing()
         self.draw_move()
 
     def mouse_click(self, event):
@@ -773,7 +824,7 @@ class TkinterMapView(tkinter.Frame):
             self.lower_right_tile_pos = (self.lower_right_tile_pos[0] + tile_move_x, self.lower_right_tile_pos[1] + tile_move_y)
             self.upper_left_tile_pos = (self.upper_left_tile_pos[0] + tile_move_x, self.upper_left_tile_pos[1] + tile_move_y)
 
-            self.check_map_border_crossing()
+            # self.check_map_border_crossing()
             self.draw_move()
 
             if abs(self.move_velocity[0]) > 1 or abs(self.move_velocity[1]) > 1:
@@ -803,9 +854,10 @@ class TkinterMapView(tkinter.Frame):
                                      current_tile_mouse_position[1] + (1 - relative_pointer_y) * (self.height / self.tile_size))
 
         if round(self.zoom) != round(self.last_zoom):
-            self.check_map_border_crossing()
+            # self.check_map_border_crossing()
             self.draw_zoom()
             self.last_zoom = round(self.zoom)
+            print(self.zoom)
 
     def mouse_zoom(self, event):
         relative_mouse_x = event.x / self.width  # mouse pointer position on map (x=[0..1], y=[0..1])
