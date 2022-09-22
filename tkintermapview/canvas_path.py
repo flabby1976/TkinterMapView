@@ -12,6 +12,7 @@ class CanvasPath:
     def __init__(self,
                  map_widget: "TkinterMapView",
                  position_list, color="#3E69CB",
+                 active_color="#3E69CB",
                  command=None,
                  name=None,
                  data: any = None):
@@ -22,6 +23,7 @@ class CanvasPath:
         self.deleted = False
 
         self.path_color = color
+        self.active_color = active_color,
         self.command = command
         self.canvas_line = None
         self.name = name
@@ -98,6 +100,7 @@ class CanvasPath:
                 self.map_widget.canvas.delete(self.canvas_line)
                 self.canvas_line = self.map_widget.canvas.create_line(self.canvas_line_positions,
                                                                       width=9, fill=self.path_color,
+                                                                      activefill=self.active_color,
                                                                       capstyle=tkinter.ROUND, joinstyle=tkinter.ROUND,
                                                                       tag="path")
 

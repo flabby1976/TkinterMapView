@@ -17,6 +17,7 @@ class CanvasPositionMarker:
                  font=None,
                  marker_color_circle: str = "#9B261E",
                  marker_color_outside: str = "#C5542D",
+                 active_color: str = "C5542D",
                  command: Callable = None,
                  image=None,
                  image_zoom_visibility: tuple = (13, float("inf")),
@@ -28,6 +29,7 @@ class CanvasPositionMarker:
         self.text_color = text_color
         self.marker_color_circle = marker_color_circle
         self.marker_color_outside = marker_color_outside
+        self.active_color = active_color
         self.text = text
         self.image = image
         self.image_hidden = False
@@ -71,6 +73,9 @@ class CanvasPositionMarker:
         self.image_hidden = image_hidden
         self.draw()
 
+    def set_color(self, color):
+        self.map_widget.canvas.itemconfigure(self.big_circle, outline=color)
+
     def mouse_enter(self, event=None):
         if sys.platform == "darwin":
             self.map_widget.canvas.config(cursor="pointinghand")
@@ -81,6 +86,7 @@ class CanvasPositionMarker:
 
     def mouse_leave(self, event=None):
         self.map_widget.canvas.config(cursor="arrow")
+
 
     def click(self, event=None):
         if self.command is not None:
@@ -120,6 +126,7 @@ class CanvasPositionMarker:
                 if self.big_circle is None:
                     self.big_circle = self.map_widget.canvas.create_oval(canvas_pos_x - 14*self.scale, canvas_pos_y - 45*self.scale,
                                                                          canvas_pos_x + 14*self.scale, canvas_pos_y - 17*self.scale,
+                                                                         activefill=self.active_color,
                                                                          fill=self.marker_color_circle, width=6,
                                                                          outline=self.marker_color_outside, tag="marker")
                     if self.command is not None:
