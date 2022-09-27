@@ -13,8 +13,9 @@ class CanvasPoint:
                  map_widget: "TkinterMapView",
                  position: tuple,
                  color: str = "#9B261E",
-                 active_color: str = "C5542D",
+                 active_color: str = "#C5542D",
                  scale: float = 1.0,
+                 tags: tuple = ('',), 
                  data: any = None):
 
         self.map_widget = map_widget
@@ -24,6 +25,7 @@ class CanvasPoint:
         self.deleted = False
         self.data = data
         self.scale = scale
+        self.tags = tags
 
         self.circle = None
 
@@ -58,20 +60,19 @@ class CanvasPoint:
         canvas_pos_x, canvas_pos_y = self.get_canvas_pos(self.position)
 
         if not self.deleted:
-            if 0 - 50 < canvas_pos_x < self.map_widget.width + 50 and 0 < canvas_pos_y < self.map_widget.height + 70:
 
-                if self.circle is None:
-                    self.circle = self.map_widget.canvas.create_oval(canvas_pos_x - 5*self.scale, canvas_pos_y - 5*self.scale,
-                                                                         canvas_pos_x + 5*self.scale, canvas_pos_y + 5*self.scale,
-                                                                         activefill=self.active_color,
-                                                                         fill=self.color, width=1, tag="point")
-                else:
-                    self.map_widget.canvas.coords(self.circle,
-                                                  canvas_pos_x - 5*self.scale, canvas_pos_y - 5*self.scale,
-                                                  canvas_pos_x + 5*self.scale, canvas_pos_y + 5*self.scale)
-
+            if self.circle is None:
+                self.circle = self.map_widget.canvas.create_oval(canvas_pos_x - 5*self.scale, canvas_pos_y - 5*self.scale,
+                                                                        canvas_pos_x + 5*self.scale, canvas_pos_y + 5*self.scale,
+                                                                        activefill=self.active_color,
+                                                                        fill=self.color, width=1, tag=self.tags + ("point",))
             else:
-                self.map_widget.canvas.delete(self.circle)
-                self.circle = None
+                self.map_widget.canvas.coords(self.circle,
+                                                canvas_pos_x - 5*self.scale, canvas_pos_y - 5*self.scale,
+                                                canvas_pos_x + 5*self.scale, canvas_pos_y + 5*self.scale)
 
-            self.map_widget.manage_z_order()
+        else:
+            self.map_widget.canvas.delete(self.circle)
+            self.circle = None
+
+        self.map_widget.manage_z_order()
