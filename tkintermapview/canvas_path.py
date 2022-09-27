@@ -15,6 +15,7 @@ class CanvasPath:
                  active_color="#3E69CB",
                  command=None,
                  name=None,
+                 scale: float = 1.0,
                  data: any = None):
 
         self.map_widget = map_widget
@@ -28,6 +29,8 @@ class CanvasPath:
         self.canvas_line = None
         self.name = name
         self.data = data
+
+        self.scale = scale
 
         self.last_upper_left_tile_pos = None
         self.last_position_list_length = len(self.position_list)
@@ -99,7 +102,7 @@ class CanvasPath:
             if self.canvas_line is None:
                 self.map_widget.canvas.delete(self.canvas_line)
                 self.canvas_line = self.map_widget.canvas.create_line(self.canvas_line_positions,
-                                                                      width=9, fill=self.path_color,
+                                                                      width=9*self.scale, fill=self.path_color,
                                                                       activefill=self.active_color,
                                                                       capstyle=tkinter.ROUND, joinstyle=tkinter.ROUND,
                                                                       tag="path")
