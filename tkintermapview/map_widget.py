@@ -16,6 +16,7 @@ from typing import Callable, List, Dict, Union, Tuple
 from functools import partial
 
 from .canvas_position_marker import CanvasPositionMarker
+from .canvas_point import CanvasPoint
 from .canvas_tile import CanvasTile
 from .utility_functions import decimal_to_osm, osm_to_decimal
 from .canvas_button import CanvasButton
@@ -121,6 +122,7 @@ class TkinterMapView(tkinter.Frame):
         # canvas objects, image cache and standard empty images
         self.canvas_tile_array: List[List[CanvasTile]] = []
         self.canvas_marker_list: List[CanvasPositionMarker] = []
+        self.canvas_point_list: List[CanvasPoint] = []
         self.canvas_path_list: List[CanvasPath] = []
         self.canvas_polygon_list: List[CanvasPolygon] = []
 
@@ -360,6 +362,12 @@ class TkinterMapView(tkinter.Frame):
         self.canvas_marker_list.append(marker)
         return marker
 
+    def set_point(self, deg_x: float, deg_y: float, text: str = None, **kwargs) -> CanvasPoint:
+        marker = CanvasPoint(self, (deg_x, deg_y), **kwargs)
+        marker.draw()
+        self.canvas_point_list.append(marker)
+        return marker
+
     def set_path(self, position_list: list, **kwargs) -> CanvasPath:
         path = CanvasPath(self, position_list, **kwargs)
         path.draw()
@@ -373,12 +381,13 @@ class TkinterMapView(tkinter.Frame):
         return polygon
 
     def delete(self, map_object: any):
-        if isinstance(map_object, (CanvasPath, CanvasPositionMarker, CanvasPolygon)):
+        if isinstance(map_object, (CanvasPath, CanvasPositionMarker, CanvasPoint, CanvasPolygon)):
             map_object.delete()
 
     def manage_z_order(self):
         self.canvas.lift("polygon")
         self.canvas.lift("path")
+        self.canvas.lift("point")
         self.canvas.lift("marker")
         self.canvas.lift("marker_image")
         self.canvas.lift("corner")
@@ -705,6 +714,8 @@ class TkinterMapView(tkinter.Frame):
             # draw other objects on canvas
             for marker in self.canvas_marker_list:
                 marker.draw()
+            for point in self.canvas_point_list:
+                point.draw()
             for path in self.canvas_path_list:
                 path.draw(move=not called_after_zoom)
             for polygon in self.canvas_polygon_list:
