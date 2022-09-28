@@ -17,7 +17,7 @@ class CanvasPositionMarker:
                  font=None,
                  marker_color_circle: str = "#9B261E",
                  marker_color_outside: str = "#C5542D",
-                 active_color: str = "C5542D",
+                 active_color: str = "#C5542D",
                  command: Callable = None,
                  image=None,
                  image_zoom_visibility: tuple = (13, float("inf")),
