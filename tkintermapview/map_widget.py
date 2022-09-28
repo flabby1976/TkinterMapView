@@ -93,8 +93,8 @@ class TkinterMapView(tkinter.Frame):
         self.canvas.bind("<Control-ButtonPress-1>", self.mouse_click)
         self.canvas.bind("<Control-ButtonRelease-1>>", self.mouse_release)
         self.canvas.bind("<Control-MouseWheel>", self.mouse_zoom)
-        self.canvas.bind("<Control-Button-4>", self.mouse_zoom)
-        self.canvas.bind("<Control-Button-5>", self.mouse_zoom)
+        # self.canvas.bind("<Control-Button-4>", self.mouse_zoom)
+        # self.canvas.bind("<Control-Button-5>", self.mouse_zoom)
         self.bind('<Configure>', self.update_dimensions)
         self.last_mouse_down_position: Union[tuple, None] = None
         self.last_mouse_down_time: Union[float, None] = None
@@ -314,10 +314,47 @@ class TkinterMapView(tkinter.Frame):
         else:
             marker_object = None
 
-        # self.check_map_border_crossing()
+        self.check_map_border_crossing()
         self.draw_initial_array()
 
         return marker_object
+
+    def set_window(self, southwest, northeast):
+
+        zoom_not_possible = True
+
+        x0, y0 = southwest
+        x1, y1 = northeast
+
+        middle = ((y0+y1)/2.0, (x0+x1)/2.0)
+
+        print(math.floor(self.width / self.tile_size))
+
+        for zoom in range(self.min_zoom, self.max_zoom + 1):
+            lower_left_corner = decimal_to_osm(y0, x0, zoom)
+            upper_right_corner = decimal_to_osm(y1, x1, zoom)
+            tile_width = abs(upper_right_corner[0] - lower_left_corner[0])
+
+            print("try zoom="+str(zoom))
+            print(tile_width)
+
+            if tile_width > math.floor(self.width / self.tile_size):
+                zoom_not_possible = False
+                my_zoom = zoom
+                break
+
+        if zoom_not_possible:
+            my_zoom = self.max_zoom
+
+        self.set_zoom(my_zoom-1)
+
+        print(my_zoom)
+
+        print(middle)
+        self.set_position(*middle, marker = True)
+        print(self.get_position())
+
+        return my_zoom
 
     def set_address(self, address_string: str, marker: bool = False, text: str = None, **kwargs) -> CanvasPositionMarker:
         """ Function uses geocode service of OpenStreetMap (Nominatim).
@@ -868,7 +905,7 @@ class TkinterMapView(tkinter.Frame):
             # self.check_map_border_crossing()
             self.draw_zoom()
             self.last_zoom = round(self.zoom)
-            print(self.zoom)
+            print("zoom="+str(self.zoom))
 
     def mouse_zoom(self, event):
         relative_mouse_x = event.x / self.width  # mouse pointer position on map (x=[0..1], y=[0..1])
